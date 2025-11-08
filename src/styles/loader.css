@@ -1,0 +1,23 @@
+.wave hr {
+  background: linear-gradient(90deg, #9ed7ff, #ffffff, #9ed7ff);
+  background-size: 200% 100%; /* Make it larger than hr width to animate */
+  animation: wave 2s linear infinite;
+}
+
+@keyframes wave {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.wave hr {
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+}
