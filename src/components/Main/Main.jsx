@@ -1,23 +1,56 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { assets } from "../../assets/assets";
 import { Context } from "../../context/Context";
-import '../../styles/loader.css';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css"; // Dark theme
+import "../../styles/loader.css";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-markup";
 
 const Main = () => {
   const {
     input,
     setInput,
-    onSent,
     loading,
     response,
     showResults,
-    prevPrompts,
-    recentPrompt, // 👈 added
+    recentPrompt,
+    onSent,
   } = useContext(Context);
 
+  const [typedResponse, setTypedResponse] = useState("");
+
+  // highlight code after markdown renders
+  useEffect(() => {
+    Prism.highlightAll();
+  }, []);
+
+  // Typing effect
+  useEffect(() => {
+    if (response && !loading) {
+      setTypedResponse(""); // reset
+      let index = 0;
+      const interval = setInterval(() => {
+        setTypedResponse(response.slice(0, index + 1));
+        index++;
+        if (index === response.length) clearInterval(interval);
+      }, 15); // typing speed
+      return () => clearInterval(interval);
+    }
+  }, [response, loading]);
+
+  // Copy code button handler
+  const handleCopy = (code) => {
+    navigator.clipboard.writeText(code);
+  };
+
   return (
-    <div className="flex-1 min-h-screen pb-[15vh] relative">
-      {/* Top Section */}
+    <div className="flex-1 min-h-screen pb-[15vh] relative bg-white">
+      {/* Header */}
       <div className="flex items-center justify-between text-xl p-5 text-[#585858]">
         <p>Gemini</p>
         <img
@@ -28,11 +61,11 @@ const Main = () => {
       </div>
 
       <div className="max-w-[900px] m-auto">
-        {/* Welcome Section (only when no result shown) */}
+        {/* Welcome Section */}
         {!showResults && !response && !loading && (
           <div className="text-[50px] text-[#c4c7c5] font-semibold p-5">
             <p>
-              <span className="bg-linear-to-r from-[#4b90ff] to-[#ff5546] bg-clip-text text-transparent inline-block [background-image:-webkit-linear-gradient(16deg,#4b90ff,#ff5546)] [-webkit-background-clip:text] [-webkit-text-fill-color:transparent]">
+              <span className="bg-linear-to-r from-[#4b90ff] to-[#ff5546] bg-clip-text text-transparent">
                 Hello, Mani
               </span>
             </p>
@@ -40,85 +73,43 @@ const Main = () => {
           </div>
         )}
 
-        {/* Suggested Prompts (only when no result shown) */}
+        {/* Suggested Prompts */}
         {!showResults && !response && !loading && (
           <div className="grid gap-3 p-5 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
-            <div
-              className="h-50 p-3 bg-[#f0f4f9] rounded-md relative cursor-pointer hover:bg-[#dfe4ea]"
-              onClick={() =>
-                setInput(
-                  "Suggest beautiful places to see on an upcoming road trip"
-                )
-              }
-            >
-              <p className="text-[#585858] text-[17px]">
-                Suggest beautiful places to see on an upcoming road trip
-              </p>
-              <img
-                src={assets.compass_icon}
-                alt=""
-                className="w-9 p-1 absolute bg-white rounded-full bottom-2 right-2"
-              />
-            </div>
-
-            <div
-              className="h-50 p-3 bg-[#f0f4f9] rounded-md relative cursor-pointer hover:bg-[#dfe4ea]"
-              onClick={() =>
-                setInput("Briefly Summarize this concept: Urban Planning")
-              }
-            >
-              <p className="text-[#585858] text-[17px]">
-                Briefly Summarize this concept: Urban Planning
-              </p>
-              <img
-                src={assets.bulb_icon}
-                alt=""
-                className="w-9 p-1 absolute bg-white rounded-full bottom-2 right-2"
-              />
-            </div>
-
-            <div
-              className="h-50 p-3 bg-[#f0f4f9] rounded-md relative cursor-pointer hover:bg-[#dfe4ea]"
-              onClick={() =>
-                setInput(
-                  "Brainstorm team bonding activities for our work retreat"
-                )
-              }
-            >
-              <p className="text-[#585858] text-[17px]">
-                Brainstorm team bonding activities for our work retreat
-              </p>
-              <img
-                src={assets.message_icon}
-                alt=""
-                className="w-9 p-1 absolute bg-white rounded-full bottom-2 right-2"
-              />
-            </div>
-
-            <div
-              className="h-50 p-3 bg-[#f0f4f9] rounded-md relative cursor-pointer hover:bg-[#dfe4ea]"
-              onClick={() =>
-                setInput("Improve the readability of the following code")
-              }
-            >
-              <p className="text-[#585858] text-[17px]">
-                Improve the readability of the following code
-              </p>
-              <img
-                src={assets.code_icon}
-                alt=""
-                className="w-9 p-1 absolute bg-white rounded-full bottom-2 right-2"
-              />
-            </div>
+            {[
+              "Suggest beautiful places to see on an upcoming road trip",
+              "Briefly Summarize this concept: Urban Planning",
+              "Brainstorm team bonding activities for our work retreat",
+              "Improve the readability of the following code",
+            ].map((prompt, index) => (
+              <div
+                key={index}
+                className="h-50 p-3 bg-[#f0f4f9] rounded-md relative cursor-pointer hover:bg-[#dfe4ea]"
+                onClick={() => setInput(prompt)}
+              >
+                <p className="text-[#585858] text-[17px]">{prompt}</p>
+                <img
+                  src={
+                    [
+                      assets.compass_icon,
+                      assets.bulb_icon,
+                      assets.message_icon,
+                      assets.code_icon,
+                    ][index]
+                  }
+                  alt=""
+                  className="w-9 p-1 absolute bg-white rounded-full bottom-2 right-2"
+                />
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Chat Results Section */}
-        {showResults && (
+        {/* Chat Results */}
+        {/* {showResults && (
           <div className="px-5 pb-24 space-y-4">
-            {/* Current Chat */}
             {recentPrompt && (
-              <div className="">
+              <div>
                 <div className="flex items-center gap-5 mb-10">
                   <img
                     src={assets.user_icon}
@@ -142,48 +133,150 @@ const Main = () => {
                     </div>
                   </div>
                 ) : (
-                  response && (
+                  typedResponse && (
                     <div className="flex items-start gap-5">
                       <img
                         src={assets.gemini_icon}
                         alt="Gemini"
                         className="w-10 h-10"
                       />
-                      <p className="text-gray-800 whitespace-pre-wrap">
-                        <span className="text-[#ff5546] font-semibold"></span>{" "}
-                        {response}
-                      </p>
+                      <div className="prose prose-slate max-w-none text-gray-800 w-full">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({ node, inline, className, children, ...props }) {
+                              const match = /language-(\w+)/.exec(className || "");
+                              const codeString = String(children).replace(/\n$/, "");
+                              return !inline ? (
+                                <div className="relative group">
+                                  <button
+                                    onClick={() => handleCopy(codeString)}
+                                    className="absolute right-2 top-2 text-xs bg-gray-700 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                                  >
+                                    Copy
+                                  </button>
+                                  <pre className="rounded-lg overflow-x-auto bg-[#1e1e1e] text-white p-3 text-sm">
+                                    <code
+                                      className={`language-${match ? match[1] : "javascript"}`}
+                                    >
+                                      {codeString}
+                                    </code>
+                                  </pre>
+                                </div>
+                              ) : (
+                                <code className="bg-gray-100 rounded px-1 py-0.5 text-sm">
+                                  {children}
+                                </code>
+                              );
+                            },
+                          }}
+                        >
+                          {typedResponse}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                   )
                 )}
               </div>
             )}
+          </div>
+        )} */}
+        {/* Chat Results */}
+        {showResults && (
+          <div
+            className="px-5 space-y-4 overflow-y-auto tiny-scrollbar"
+            style={{ maxHeight: "calc(100vh - 80px - 120px)" }} // 80px header + 120px input area
+          >
+            {recentPrompt && (
+              <div>
+                <div className="flex items-center gap-5 mb-10">
+                  <img
+                    src={assets.user_icon}
+                    alt="User"
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <p className="font-medium text-gray-700">{recentPrompt}</p>
+                </div>
 
-            {/* Previous Prompts */}
-            {/* {!loading && prevPrompts.length > 0 && (
-              <div className="space-y-4">
-                {prevPrompts.map((item, index) => (
-                  <div
-                    key={index}
-                    className="p-4 bg-[#f9fafb] rounded-lg shadow-sm"
-                  >
-                    <p className="font-medium text-gray-700 mb-2">
-                      <span className="text-[#4b90ff]">You:</span> {item.prompt}
-                    </p>
-                    <p className="text-gray-800 whitespace-pre-wrap">
-                      <span className="text-[#ff5546]">Gemini:</span>{" "}
-                      {item.response}
-                    </p>
+                {loading ? (
+                  <div className="flex items-start gap-5">
+                    <img
+                      src={assets.gemini_icon}
+                      alt="Gemini"
+                      className="w-10 h-10"
+                    />
+                    <div className="w-full flex flex-col gap-2 wave">
+                      <hr />
+                      <hr />
+                      <hr />
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  typedResponse && (
+                    <div className="flex items-start gap-5">
+                      <img
+                        src={assets.gemini_icon}
+                        alt="Gemini"
+                        className="w-10 h-10"
+                      />
+                      <div className="prose prose-slate max-w-none text-gray-800 w-full">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({
+                              node,
+                              inline,
+                              className,
+                              children,
+                              ...props
+                            }) {
+                              const match = /language-(\w+)/.exec(
+                                className || ""
+                              );
+                              const codeString = String(children).replace(
+                                /\n$/,
+                                ""
+                              );
+                              return !inline ? (
+                                <div className="relative group">
+                                  <button
+                                    onClick={() => handleCopy(codeString)}
+                                    className="absolute right-2 top-2 text-xs bg-gray-700 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                                  >
+                                    Copy
+                                  </button>
+                                  <pre className="rounded-lg overflow-x-auto bg-[#1e1e1e] text-white p-3 text-sm">
+                                    <code
+                                      className={`language-${
+                                        match ? match[1] : "javascript"
+                                      }`}
+                                    >
+                                      {codeString}
+                                    </code>
+                                  </pre>
+                                </div>
+                              ) : (
+                                <code className="bg-gray-100 rounded px-1 py-0.5 text-sm">
+                                  {children}
+                                </code>
+                              );
+                            },
+                          }}
+                        >
+                          {typedResponse}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
-            )} */}
+            )}
           </div>
         )}
 
         {/* Input Section */}
-        <div className="absolute w-full bottom-0 max-w-[900px] px-5 m-auto">
-          <div className="flex items-center justify-between gap-5 px-5 py-2 bg-[#f0f4f9] rounded-full">
+        <div className="fixed bg-white z-10 w-full bottom-0 max-w-[900px] px-5 m-auto">
+          <div className="flex items-center justify-between gap-4 px-5 py-3 bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] border border-gray-100 transition-all duration-300 focus-within:shadow-[0_6px_25px_rgba(0,0,0,0.2)]">
             <input
               type="text"
               placeholder="Enter a prompt here..."
