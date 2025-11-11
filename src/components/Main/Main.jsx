@@ -23,6 +23,7 @@ const Main = () => {
   } = useContext(Context);
 
   const [typedResponse, setTypedResponse] = useState("");
+  const [isListening, setIsListening] = useState(false);
 
   // highlight code after markdown renders
   useEffect(() => {
@@ -48,11 +49,50 @@ const Main = () => {
     navigator.clipboard.writeText(code);
   };
 
+  // Handle mic click - Web Speech API
+  const handleMicClick = () => {
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  let transcript = "";
+  let silenceTimer;
+
+  recognition.onstart = () => {
+    console.log("Listening...");
+    setIsListening(true);
+  };
+
+  recognition.onend = () => {
+    console.log("Stopped listening.");
+    setIsListening(false);
+  };
+
+  recognition.onresult = (event) => {
+    transcript = event.results[0][0].transcript;
+    console.log("Converted text from voice:", transcript);
+    setInput(transcript);
+
+    // reset silence timer on every result
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      if (transcript.trim()) {
+        console.log("Silence detected → sending automatically");
+        onSent(); // automatically send prompt
+      }
+    }, 1000); // 1 seconds of silence
+  };
+
+  recognition.start();
+};
+
+
   return (
     <div className="flex-1 min-h-screen pb-[15vh] relative bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between text-xl p-5 text-[#585858]">
-        <p>Gemini</p>
+      <div className="flex items-start justify-between text-2xl p-3 text-[#585858]">
+        <p className="">Gemini</p>
         <img
           src={assets.user_icon}
           alt="user_icon"
@@ -63,7 +103,7 @@ const Main = () => {
       <div className="max-w-[900px] m-auto">
         {/* Welcome Section */}
         {!showResults && !response && !loading && (
-          <div className="text-[50px] text-[#c4c7c5] font-semibold p-5">
+          <div className="text-[16px] md:text-[40px] text-[#c4c7c5] font-semibold p-5">
             <p>
               <span className="bg-linear-to-r from-[#4b90ff] to-[#ff5546] bg-clip-text text-transparent">
                 Hello, Mani
@@ -75,7 +115,7 @@ const Main = () => {
 
         {/* Suggested Prompts */}
         {!showResults && !response && !loading && (
-          <div className="grid gap-3 p-5 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+          <div className="grid gap-5 p-5 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
             {[
               "Suggest beautiful places to see on an upcoming road trip",
               "Briefly Summarize this concept: Urban Planning",
@@ -84,10 +124,10 @@ const Main = () => {
             ].map((prompt, index) => (
               <div
                 key={index}
-                className="h-50 p-3 bg-[#f0f4f9] rounded-md relative cursor-pointer hover:bg-[#dfe4ea]"
+                className="h-30 md:h-40 p-3 bg-[#f0f4f9] rounded-md relative cursor-pointer hover:bg-[#dfe4ea]"
                 onClick={() => setInput(prompt)}
               >
-                <p className="text-[#585858] text-[17px]">{prompt}</p>
+                <p className="text-[#585858] text-[16px]">{prompt}</p>
                 <img
                   src={
                     [
@@ -98,7 +138,7 @@ const Main = () => {
                     ][index]
                   }
                   alt=""
-                  className="w-9 p-1 absolute bg-white rounded-full bottom-2 right-2"
+                  className="w-7 p-1 absolute bg-white rounded-full bottom-2 right-2"
                 />
               </div>
             ))}
@@ -106,90 +146,14 @@ const Main = () => {
         )}
 
         {/* Chat Results */}
-        {/* {showResults && (
-          <div className="px-5 pb-24 space-y-4">
-            {recentPrompt && (
-              <div>
-                <div className="flex items-center gap-5 mb-10">
-                  <img
-                    src={assets.user_icon}
-                    alt="User"
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <p className="font-medium text-gray-700">{recentPrompt}</p>
-                </div>
-
-                {loading ? (
-                  <div className="flex items-start gap-5">
-                    <img
-                      src={assets.gemini_icon}
-                      alt="Gemini"
-                      className="w-10 h-10"
-                    />
-                    <div className="w-full flex flex-col gap-2 wave">
-                      <hr />
-                      <hr />
-                      <hr />
-                    </div>
-                  </div>
-                ) : (
-                  typedResponse && (
-                    <div className="flex items-start gap-5">
-                      <img
-                        src={assets.gemini_icon}
-                        alt="Gemini"
-                        className="w-10 h-10"
-                      />
-                      <div className="prose prose-slate max-w-none text-gray-800 w-full">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            code({ node, inline, className, children, ...props }) {
-                              const match = /language-(\w+)/.exec(className || "");
-                              const codeString = String(children).replace(/\n$/, "");
-                              return !inline ? (
-                                <div className="relative group">
-                                  <button
-                                    onClick={() => handleCopy(codeString)}
-                                    className="absolute right-2 top-2 text-xs bg-gray-700 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
-                                  >
-                                    Copy
-                                  </button>
-                                  <pre className="rounded-lg overflow-x-auto bg-[#1e1e1e] text-white p-3 text-sm">
-                                    <code
-                                      className={`language-${match ? match[1] : "javascript"}`}
-                                    >
-                                      {codeString}
-                                    </code>
-                                  </pre>
-                                </div>
-                              ) : (
-                                <code className="bg-gray-100 rounded px-1 py-0.5 text-sm">
-                                  {children}
-                                </code>
-                              );
-                            },
-                          }}
-                        >
-                          {typedResponse}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        )} */}
-        {/* Chat Results */}
         {showResults && (
           <div
-            className="px-5 space-y-4 overflow-y-auto tiny-scrollbar"
+            className="px-5 space-y-4 overflow-y-auto scrollbar-hide"
             style={{ maxHeight: "calc(100vh - 80px - 120px)" }} // 80px header + 120px input area
           >
             {recentPrompt && (
               <div>
-                <div className="flex items-center gap-5 mb-10">
+                <div className="flex items-center gap-5 mb-6">
                   <img
                     src={assets.user_icon}
                     alt="User"
@@ -279,12 +243,15 @@ const Main = () => {
           <div className="flex items-center justify-between gap-4 px-5 py-3 bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] border border-gray-100 transition-all duration-300 focus-within:shadow-[0_6px_25px_rgba(0,0,0,0.2)]">
             <input
               type="text"
-              placeholder="Enter a prompt here..."
+              placeholder={
+                isListening ? "Listening..." : "Enter a prompt here..."
+              }
               className="flex-1 bg-transparent text-[16px] p-2 outline-none"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onSent()}
             />
+
             <div className="flex items-center gap-4">
               <img
                 src={assets.gallery_icon}
@@ -295,6 +262,7 @@ const Main = () => {
                 src={assets.mic_icon}
                 alt=""
                 className="w-5 cursor-pointer"
+                onClick={handleMicClick} // <-- voice feature
               />
               <img
                 src={assets.send_icon}
